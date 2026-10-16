@@ -3174,19 +3174,27 @@ function VoltAuthScreen() {
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
 
-  async function entrarComGoogle() {
-    setErro(""); setSucesso(""); setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: window.location.origin },
-      });
-      if (error) throw error;
-    } catch (e) {
-      setErro(e?.message || "Não foi possível iniciar o login com Google.");
-      setLoading(false);
-    }
+ 
+async function entrarComGoogle() {
+  setErro("");
+  setSucesso("");
+  setLoading(true);
+
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+
+    if (error) throw error;
+  } catch (e) {
+    setErro(e?.message || "Não foi possível entrar com Google.");
+    setLoading(false);
   }
+}
+
 
   async function enviarFormulario(event) {
     event.preventDefault(); setErro(""); setSucesso(""); setLoading(true);
