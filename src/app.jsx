@@ -16,6 +16,57 @@ const FALLBACK_CATEGORIAS = [
   { id: "acessorios", nome: "Acessórios", imagem: "" },
 ];
 
+// Imagens de reserva por categoria. Se uma URL externa falhar, o componente
+// tenta as alternativas e termina em uma arte SVG local embutida (sem dependência externa).
+const CATEGORY_IMAGE_FALLBACKS = {
+  "playstation 5": [
+    "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?auto=format&fit=crop&w=1000&q=85",
+    "https://images.unsplash.com/photo-1607853202273-797f1c22a38e?auto=format&fit=crop&w=1000&q=85",
+  ],
+  "playstation 4": [
+    "https://images.unsplash.com/photo-1592840496694-26d035b52b48?auto=format&fit=crop&w=1000&q=85",
+    "https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?auto=format&fit=crop&w=1000&q=85",
+  ],
+  "xbox": [
+    "https://images.unsplash.com/photo-1621259182978-fbf93132d53d?auto=format&fit=crop&w=1000&q=85",
+    "https://images.unsplash.com/photo-1605901309584-818e25960a8f?auto=format&fit=crop&w=1000&q=85",
+  ],
+  "controles": [
+    "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&w=1000&q=85",
+    "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&w=1000&q=85",
+  ],
+  "headsets": [
+    "https://images.unsplash.com/photo-1599669454699-248893623440?auto=format&fit=crop&w=1000&q=85",
+    "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1000&q=85",
+  ],
+  "acessórios": [
+    "https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&w=1000&q=85",
+    "https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?auto=format&fit=crop&w=1000&q=85",
+  ],
+};
+
+function nomeCategoria(categoria) {
+  return String(categoria?.nome || categoria?.name || categoria?.categoria || "Acessórios").trim();
+}
+
+function svgCategoriaFallback(categoria) {
+  const nome = nomeCategoria(categoria);
+  const lower = nome.toLowerCase();
+  const sigla = lower.includes("xbox") ? "XBOX" : lower.includes("playstation 5") || lower.includes("ps5") ? "PS5" : lower.includes("playstation 4") || lower.includes("ps4") ? "PS4" : lower.includes("headset") ? "AUDIO" : lower.includes("controle") ? "GEAR" : "VOLT";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="560" viewBox="0 0 1000 560"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#10271a"/><stop offset="1" stop-color="#050906"/></linearGradient><radialGradient id="r"><stop stop-color="#59B37E" stop-opacity=".42"/><stop offset="1" stop-color="#59B37E" stop-opacity="0"/></radialGradient></defs><rect width="1000" height="560" fill="url(#g)"/><circle cx="780" cy="130" r="330" fill="url(#r)"/><path d="M640 0L1000 0 1000 560 830 560Z" fill="#337F58" opacity=".12"/><text x="64" y="340" fill="#59B37E" font-family="Arial,sans-serif" font-size="132" font-weight="900" letter-spacing="8">${sigla}</text><text x="70" y="405" fill="#ffffff" fill-opacity=".8" font-family="Arial,sans-serif" font-size="28" letter-spacing="7">POWER YOUR GAME</text><path d="M70 450H340" stroke="#59B37E" stroke-width="5" stroke-linecap="round"/></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function imagensFallbackCategoria(categoria) {
+  const nome = nomeCategoria(categoria).toLowerCase();
+  const chave = Object.keys(CATEGORY_IMAGE_FALLBACKS).find((item) => nome.includes(item) || (item === "playstation 5" && nome.includes("ps5")) || (item === "playstation 4" && nome.includes("ps4")));
+  return [...(CATEGORY_IMAGE_FALLBACKS[chave] || CATEGORY_IMAGE_FALLBACKS["acessórios"]), svgCategoriaFallback(categoria)];
+}
+
+function imagemCategoria(categoria) {
+  return categoria?.imagem || categoria?.imagem_url || categoria?.image_url || categoria?.url_imagem || imagensFallbackCategoria(categoria)[0];
+}
+
 const categoriaFallback = (produto) => {
   const texto = `${produto?.categoria || ""} ${produto?.nome || ""}`.toLowerCase();
 
@@ -136,6 +187,13 @@ function StoreApp() {
   const [produtoEditando, setProdutoEditando] = useState(null);
 
   const [salvando, setSalvando] = useState(false);
+
+  // O logo e o botão Início sempre limpam os filtros e mostram o catálogo completo.
+  function irInicio() {
+    setCategoriaSelecionada("Todas as categorias");
+    setBusca("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   /* =======================================================
      FORMULÁRIO
@@ -778,14 +836,22 @@ function StoreApp() {
 
     sectionTitle: {
       margin: 0,
+      fontFamily: "Orbitron, Inter, ui-sans-serif, system-ui, sans-serif",
       fontSize: 30,
-      letterSpacing: "-.04em",
+      fontWeight: 900,
+      letterSpacing: ".055em",
+      textShadow: "0 0 24px rgba(89,179,126,.18)",
     },
 
     sectionSubtitle: {
-      color: "#777",
-      fontSize: 13,
+      color: "#59B37E",
+      fontFamily: "Space Grotesk, Inter, ui-sans-serif, system-ui, sans-serif",
+      fontSize: 15,
+      fontWeight: 700,
+      fontStyle: "italic",
+      letterSpacing: ".12em",
       marginTop: 7,
+      textShadow: "0 0 18px rgba(89,179,126,.18)",
     },
 
     categories: {
@@ -796,34 +862,42 @@ function StoreApp() {
 
     categoryCard: {
       position: "relative",
-      height: 150,
+      height: 170,
       overflow: "hidden",
       borderRadius: 17,
-      border: "1px solid rgba(255,255,255,.08)",
-      background: "#0c1016",
+      border: "1px solid rgba(89,179,126,.14)",
+      background: "linear-gradient(135deg, #12251a, #080d0a)",
       cursor: "pointer",
+      boxShadow: "0 12px 34px rgba(0,0,0,.18)",
+      transition: "transform .35s cubic-bezier(.2,.8,.2,1), border-color .35s ease, box-shadow .35s ease",
     },
 
     categoryImage: {
       width: "100%",
       height: "100%",
       objectFit: "cover",
+      objectPosition: "center",
       display: "block",
+      filter: "saturate(.88) contrast(1.06)",
+      transition: "transform .65s cubic-bezier(.2,.8,.2,1), filter .65s ease",
     },
 
     categoryOverlay: {
       position: "absolute",
       inset: 0,
-      background:
-        "linear-gradient(0deg, rgba(0,0,0,.88), rgba(0,0,0,.08) 75%)",
+      background: "linear-gradient(0deg, rgba(4,12,7,.96), rgba(4,12,7,.12) 72%), linear-gradient(135deg, rgba(51,127,88,.10), transparent 58%)",
       display: "flex",
       alignItems: "end",
       padding: 17,
+      borderTop: "1px solid rgba(89,179,126,.08)",
     },
 
     categoryName: {
-      fontWeight: 900,
-      fontSize: 14,
+      fontFamily: "Space Grotesk, Inter, ui-sans-serif, system-ui, sans-serif",
+      fontWeight: 700,
+      fontSize: 15,
+      letterSpacing: ".01em",
+      textShadow: "0 2px 16px rgba(0,0,0,.55)",
     },
 
     toolbar: {
@@ -1215,6 +1289,8 @@ function StoreApp() {
   return (
     <div style={styles.app}>
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
         * {
           box-sizing: border-box;
         }
@@ -1226,6 +1302,7 @@ function StoreApp() {
         body {
           margin: 0;
           background: #080D0A;
+          font-family: "Space Grotesk", Inter, ui-sans-serif, system-ui, sans-serif;
         }
 
         .volt-user-chip { display:flex; align-items:center; gap:8px; min-width:0; max-width:220px; color:#f5f7ef; font-size:11px; font-weight:700; }
@@ -1332,17 +1409,87 @@ function StoreApp() {
           transform: scale(1.045);
         }
 
+        .volt-section-heading h2,
+        .volt-explore-word {
+          font-family: 'Orbitron', 'Space Grotesk', sans-serif !important;
+        }
+
+        .volt-section-heading h2 {
+          letter-spacing: .04em !important;
+          font-weight: 900 !important;
+          background: linear-gradient(100deg, #ffffff 10%, #59B37E 55%, #337F58 95%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: drop-shadow(0 0 18px rgba(89,179,126,.12));
+        }
+
+        .volt-explore-word {
+          font-weight: 600 !important;
+          font-style: normal !important;
+          letter-spacing: .22em !important;
+          text-transform: uppercase;
+        }
+
+        .volt-category {
+          animation: voltCategoryReveal .7s cubic-bezier(.2,.8,.2,1) both;
+          isolation: isolate;
+        }
+
+        .volt-category::after {
+          content: "";
+          position: absolute;
+          inset: -1px;
+          z-index: 1;
+          border-radius: inherit;
+          pointer-events: none;
+          background: linear-gradient(115deg, transparent 20%, rgba(89,179,126,.18) 48%, transparent 70%);
+          transform: translateX(-130%);
+          transition: transform .75s ease;
+        }
+
         .volt-category:hover {
-          transform: translateY(-5px);
-          border-color: rgba(89,179,126,.25) !important;
+          transform: translateY(-7px) scale(1.012);
+          border-color: rgba(89,179,126,.52) !important;
+          box-shadow: 0 20px 48px rgba(0,0,0,.34), 0 0 26px rgba(89,179,126,.09);
         }
 
         .volt-category img {
-          transition: transform .5s ease;
+          transition: transform .65s cubic-bezier(.2,.8,.2,1), filter .65s ease;
         }
 
         .volt-category:hover img {
-          transform: scale(1.06);
+          transform: scale(1.09);
+          filter: saturate(1.08) contrast(1.08);
+        }
+
+        .volt-category:hover::after { transform: translateX(130%); }
+
+        .volt-category:nth-child(2) { animation-delay: .07s; }
+        .volt-category:nth-child(3) { animation-delay: .14s; }
+        .volt-category:nth-child(4) { animation-delay: .21s; }
+        .volt-category:nth-child(5) { animation-delay: .28s; }
+        .volt-category:nth-child(6) { animation-delay: .35s; }
+
+        .volt-section-heading { animation: voltHeadingIn .8s cubic-bezier(.2,.8,.2,1) both; }
+        .volt-section-heading h2 { animation: voltTitleGlow 4.5s ease-in-out infinite; }
+        .volt-section-heading .volt-explore-word { display:inline-block; transform-origin:left center; animation: voltExploreIn .9s .12s cubic-bezier(.2,.8,.2,1) both; }
+
+        @keyframes voltCategoryReveal {
+          from { opacity: 0; transform: translateY(18px) scale(.985); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes voltHeadingIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes voltExploreIn {
+          from { opacity: 0; transform: translateX(-10px) skewX(-8deg); }
+          to { opacity: 1; transform: translateX(0) skewX(0); }
+        }
+        @keyframes voltTitleGlow {
+          0%, 100% { text-shadow: 0 0 18px rgba(89,179,126,.10); }
+          50% { text-shadow: 0 0 28px rgba(89,179,126,.28); }
         }
 
         .volt-loading {
@@ -1402,8 +1549,186 @@ function StoreApp() {
         }
 
         .volt-hero + * { scroll-margin-top: 90px; }
+
+        /* Indicador de rolagem: aranha descendo pelo fio */
+        .volt-spider-scroll {
+          position: absolute !important;
+          z-index: 5 !important;
+          left: 50%;
+          bottom: 18px;
+          transform: translateX(-50%);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 7px;
+          padding: 8px 12px 4px;
+          border: 1px solid rgba(89,179,126,.18);
+          border-radius: 999px;
+          background: rgba(5,12,8,.42);
+          color: #a6cbb2;
+          font: 800 8px/1 'Space Grotesk', sans-serif;
+          letter-spacing: .2em;
+          cursor: pointer;
+          backdrop-filter: blur(8px);
+          transition: border-color .25s, background .25s, box-shadow .25s;
+        }
+        .volt-spider-scroll:hover {
+          border-color: rgba(89,179,126,.6);
+          background: rgba(16,35,23,.78);
+          box-shadow: 0 0 24px rgba(89,179,126,.15);
+        }
+        .volt-spider-thread {
+          position: relative;
+          width: 1px;
+          height: 43px;
+          background: linear-gradient(to bottom, rgba(89,179,126,.12), rgba(89,179,126,.8));
+          box-shadow: 0 0 7px rgba(89,179,126,.28);
+        }
+        .volt-spider-thread::after {
+          content: '';
+          position: absolute;
+          left: -3px;
+          bottom: -1px;
+          width: 7px;
+          height: 7px;
+          border-right: 1px solid #59B37E;
+          border-bottom: 1px solid #59B37E;
+          transform: rotate(45deg);
+          opacity: .7;
+        }
+        .volt-spider {
+          position: absolute;
+          left: 50%;
+          top: 0;
+          transform: translate(-50%, -50%);
+          display: block;
+          font-size: 17px;
+          line-height: 1;
+          filter: drop-shadow(0 0 5px rgba(89,179,126,.65));
+          animation: voltSpiderDescend 2.4s cubic-bezier(.45,0,.55,1) infinite;
+          transform-origin: top center;
+        }
+        @keyframes voltSpiderDescend {
+          0%, 100% { top: 2px; transform: translate(-50%, -50%) rotate(-8deg); }
+          45% { top: 35px; transform: translate(-50%, -50%) rotate(8deg); }
+          55% { top: 35px; transform: translate(-50%, -50%) rotate(-5deg); }
+        }
+        @media (max-width: 640px) {
+          .volt-spider-scroll { bottom: 10px; transform: translateX(-50%) scale(.88); transform-origin: bottom center; }
+          .volt-spider-thread { height: 31px; }
+          @keyframes voltSpiderDescend {
+            0%, 100% { top: 2px; transform: translate(-50%, -50%) rotate(-8deg); }
+            45%, 55% { top: 25px; transform: translate(-50%, -50%) rotate(6deg); }
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .volt-spider { animation: none; top: 50%; }
+        }
+
+        /* Barra de rolagem VOLT: trilho escuro, polegar verde e aranha descendo */
+        html, body, * { scrollbar-width: thin; scrollbar-color: #59B37E #0a100c; }
+        ::-webkit-scrollbar { width: 11px; height: 11px; }
+        ::-webkit-scrollbar-track { background: linear-gradient(180deg, #080d0a, #101a13, #080d0a); border-left: 1px solid rgba(89,179,126,.12); }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #337F58, #59B37E, #337F58); border: 3px solid #080d0a; border-radius: 999px; box-shadow: 0 0 10px rgba(89,179,126,.28); }
+        ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #59B37E, #a0edb8, #59B37E); }
+        .volt-page-spider { position: fixed; z-index: 950; right: 2px; top: 9vh; height: 82vh; width: 22px; pointer-events: none; display: flex; justify-content: center; opacity: .9; }
+        .volt-page-spider::before { content: ""; position: absolute; top: 0; height: 100%; width: 1px; background: linear-gradient(180deg, transparent, rgba(89,179,126,.72), rgba(89,179,126,.18), transparent); box-shadow: 0 0 6px rgba(89,179,126,.25); }
+        .volt-page-spider span { position: absolute; top: 0; font-size: 17px; line-height: 1; filter: drop-shadow(0 0 5px rgba(89,179,126,.8)); animation: voltSideSpider 5.5s ease-in-out infinite; }
+        @keyframes voltSideSpider { 0%, 100% { top: 0; transform: translateX(-2px) rotate(-12deg); } 48% { top: calc(100% - 20px); transform: translateX(2px) rotate(12deg); } 52% { top: calc(100% - 20px); transform: translateX(-1px) rotate(-8deg); } }
+        /* O mesmo detalhe aparece dentro de cada modal com rolagem própria */
+        /* Carrinho e favoritos: experiência premium VOLT */
+        .volt-cart-modal, .volt-favorites-modal {
+          isolation: isolate;
+          background: radial-gradient(ellipse at 8% 0%, rgba(89,179,126,.12), transparent 36%), linear-gradient(145deg,#0b130e 0%,#090c11 55%,#080d0a 100%) !important;
+          border: 1px solid rgba(89,179,126,.28) !important;
+          box-shadow: 0 35px 120px rgba(0,0,0,.76), 0 0 55px rgba(89,179,126,.08), inset 0 1px rgba(255,255,255,.045) !important;
+          animation: voltModal .42s cubic-bezier(.16,1,.3,1), voltCartAura 5s ease-in-out .45s infinite;
+        }
+        .volt-cart-modal::after, .volt-favorites-modal::after {
+          content: ""; position: absolute; inset: 0 0 auto; height: 2px; z-index: 5; pointer-events: none;
+          background: linear-gradient(90deg,transparent,#337F58,#9cf5bd,#59B37E,transparent);
+          background-size: 220% 100%; animation: voltModalBeam 3.8s linear infinite;
+        }
+        .volt-modal-heading { position: relative; padding: 5px 0 17px; }
+        .volt-modal-kicker { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 9px; color: #59B37E; font: 800 9px/1 'Space Grotesk',sans-serif; letter-spacing: .24em; }
+        .volt-modal-kicker::before { content: ''; width: 18px; height: 1px; background: #59B37E; box-shadow: 0 0 9px #59B37E; }
+        .volt-modal-heading h2 { text-shadow: 0 0 28px rgba(89,179,126,.14); }
+        .volt-modal-subtitle { margin: 8px 0 0; color: #89978b; font-size: 12px; letter-spacing: .01em; }
+        .volt-heading-count { display: inline-grid; place-items: center; vertical-align: middle; min-width: 27px; height: 27px; margin-left: 5px; padding: 0 7px; border-radius: 9px; color: #07110a; background: linear-gradient(135deg,#9cf5bd,#59B37E); font: 900 12px 'Space Grotesk',sans-serif; box-shadow: 0 0 22px rgba(89,179,126,.24); animation: voltCountPop .45s cubic-bezier(.2,1.6,.4,1) both; }
+        .volt-cart-modal .volt-modal-content, .volt-favorites-modal .volt-modal-content { position: relative; }
+        .volt-cart-item { position: relative; overflow: hidden; align-items: center; border: 1px solid rgba(255,255,255,.065); background: linear-gradient(115deg,rgba(255,255,255,.045),rgba(89,179,126,.025)) !important; box-shadow: inset 0 1px rgba(255,255,255,.025); transition: transform .28s cubic-bezier(.2,.8,.2,1),border-color .28s,background .28s,box-shadow .28s !important; animation: voltItemEnter .48s cubic-bezier(.2,.8,.2,1) both; }
+        .volt-cart-item::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 2px; background: linear-gradient(180deg,transparent,#59B37E,transparent); transform: scaleY(.35); opacity: .55; transition: transform .3s,opacity .3s; }
+        .volt-cart-item:hover { transform: translateY(-3px) translateX(2px); border-color: rgba(89,179,126,.3); background: linear-gradient(115deg,rgba(89,179,126,.09),rgba(255,255,255,.025)) !important; box-shadow: 0 14px 28px rgba(0,0,0,.18),0 0 22px rgba(89,179,126,.045); }
+        .volt-cart-item:hover::before { transform: scaleY(1); opacity: 1; }
+        .volt-cart-item img { flex-shrink: 0; border: 1px solid rgba(89,179,126,.18); box-shadow: 0 7px 20px rgba(0,0,0,.28); transition: transform .4s,filter .4s,border-color .4s !important; }
+        .volt-cart-item:hover img { transform: scale(1.045); filter: saturate(1.15); border-color: rgba(89,179,126,.45); }
+        .volt-favorite-card { position: relative; border-color: rgba(255,255,255,.075) !important; background: linear-gradient(145deg,rgba(255,255,255,.045),rgba(89,179,126,.025)) !important; box-shadow: 0 12px 28px rgba(0,0,0,.14),inset 0 1px rgba(255,255,255,.025); animation: voltItemEnter .52s cubic-bezier(.2,.8,.2,1) both; transition: transform .32s cubic-bezier(.2,.8,.2,1),border-color .3s,box-shadow .3s !important; }
+        .volt-favorite-card::before { content: '♥'; position: absolute; top: 10px; right: 10px; z-index: 2; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; color: #9cf5bd; background: rgba(7,17,10,.78); border: 1px solid rgba(89,179,126,.28); backdrop-filter: blur(10px); box-shadow: 0 0 18px rgba(89,179,126,.09); animation: voltHeartBeat 2.8s ease-in-out infinite; }
+        .volt-favorite-card:hover { transform: translateY(-7px) scale(1.012); border-color: rgba(89,179,126,.38) !important; box-shadow: 0 22px 42px rgba(0,0,0,.32),0 0 30px rgba(89,179,126,.09); }
+        .volt-favorite-card img { display: block; transition: transform .55s cubic-bezier(.2,.8,.2,1),filter .55s; }
+        .volt-favorite-card:hover img { transform: scale(1.07); filter: saturate(1.18) contrast(1.04); }
+        .volt-favorite-card > div { position: relative; }
+        .volt-cart-modal .volt-modal-price-box, .volt-cart-modal [style*="modalPriceBox"] { border-color: rgba(89,179,126,.22) !important; background: linear-gradient(110deg,rgba(89,179,126,.11),rgba(89,179,126,.035)) !important; box-shadow: 0 0 28px rgba(89,179,126,.04),inset 0 1px rgba(255,255,255,.035); }
+        .volt-cart-modal button, .volt-favorites-modal button { transition: transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s,border-color .22s,background .22s !important; }
+        .volt-cart-modal button:hover, .volt-favorites-modal button:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(89,179,126,.11); }
+        .volt-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 235px; gap: 10px; border: 1px dashed rgba(89,179,126,.2); border-radius: 18px; background: radial-gradient(circle at 50% 20%,rgba(89,179,126,.08),transparent 65%); animation: voltItemEnter .5s ease both; }
+        .volt-empty-state strong { color: #e8f2e9; font-size: 15px; }
+        .volt-empty-state p { margin: 0; max-width: 300px; color: #788579; font-size: 12px; line-height: 1.7; }
+        .volt-empty-icon { display: grid; place-items: center; width: 62px; height: 62px; margin-bottom: 5px; border: 1px solid rgba(89,179,126,.23); border-radius: 20px; background: rgba(89,179,126,.065); color: #59B37E; font-size: 31px; text-shadow: 0 0 24px rgba(89,179,126,.3); animation: voltFloat 3s ease-in-out infinite; }
+        @keyframes voltModalBeam { 0% { background-position: 100% 0; } 100% { background-position: -120% 0; } }
+        @keyframes voltCartAura { 0%,100% { box-shadow: 0 35px 120px rgba(0,0,0,.76),0 0 35px rgba(89,179,126,.055),inset 0 1px rgba(255,255,255,.045); } 50% { box-shadow: 0 35px 120px rgba(0,0,0,.76),0 0 58px rgba(89,179,126,.12),inset 0 1px rgba(255,255,255,.045); } }
+        @keyframes voltItemEnter { from { opacity: 0; transform: translateY(13px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes voltCountPop { from { opacity: 0; transform: scale(.55) rotate(-10deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+        @keyframes voltHeartBeat { 0%,80%,100% { transform: scale(1); } 86% { transform: scale(1.14); } 92% { transform: scale(.96); } }
+        @media (max-width: 600px) { .volt-cart-modal .volt-modal-content, .volt-favorites-modal .volt-modal-content { padding: 20px !important; } .volt-cart-item { align-items: flex-start; gap: 10px !important; padding: 10px !important; } .volt-cart-item img { width: 76px !important; height: 72px !important; } .volt-modal-subtitle { max-width: 260px; line-height: 1.6; } }
+        @media (prefers-reduced-motion: reduce) { .volt-cart-modal, .volt-favorites-modal, .volt-cart-item, .volt-favorite-card, .volt-empty-icon, .volt-favorite-card::before { animation: none !important; transition: none !important; } }
+
+        .volt-modal { position: relative; scrollbar-width: thin; scrollbar-color: #59B37E #0a100c; }
+        .volt-modal::before { content: "🕷️"; position: sticky; top: 12px; float: right; margin-right: 10px; margin-bottom: -22px; z-index: 30; display: block; width: 18px; height: 22px; font-size: 16px; line-height: 22px; pointer-events: none; filter: drop-shadow(0 0 6px rgba(89,179,126,.85)); animation: voltModalSideSpider 4.2s ease-in-out infinite; }
+        .volt-modal::-webkit-scrollbar { width: 10px; }
+        .volt-modal::-webkit-scrollbar-track { background: #0a100c; border-left: 1px solid rgba(89,179,126,.18); }
+        .volt-modal::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #337F58, #59B37E); border: 2px solid #0a100c; border-radius: 999px; }
+        @keyframes voltModalSideSpider { 0%, 100% { transform: translateY(0) rotate(-9deg); } 48% { transform: translateY(min(58vh, 360px)) rotate(10deg); } 52% { transform: translateY(min(58vh, 360px)) rotate(-5deg); } }
+        @media (max-width: 700px) { .volt-page-spider { right: 0; width: 15px; opacity: .72; } .volt-page-spider span { font-size: 14px; } .volt-modal::before { margin-right: 5px; } }
+        @media (prefers-reduced-motion: reduce) { .volt-page-spider span, .volt-modal::before { animation: none !important; } }
+
         header img[alt*="VOLT"] { transition: transform .28s ease, filter .28s ease; }
         header img[alt*="VOLT"]:hover { transform: scale(1.035); filter: drop-shadow(0 0 22px rgba(89,179,126,.32)); }
+
+        .volt-gameplay-section { position:relative; overflow:hidden; isolation:isolate; }
+        .volt-gameplay-section::before { content:""; position:absolute; width:420px; height:420px; border-radius:50%; left:-180px; top:10%; background:rgba(51,127,88,.13); filter:blur(90px); z-index:-1; animation:voltAmbient 8s ease-in-out infinite alternate; pointer-events:none; }
+        .volt-gameplay-section::after { content:""; position:absolute; width:360px; height:360px; border-radius:50%; right:-150px; bottom:-60px; background:rgba(89,179,126,.09); filter:blur(90px); z-index:-1; animation:voltAmbient 10s ease-in-out infinite alternate-reverse; pointer-events:none; }
+        .volt-gameplay-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:24px; animation:voltHeadingIn .8s both; }
+        .volt-gameplay-kicker { color:#59B37E; font-size:10px; font-weight:900; letter-spacing:.22em; text-transform:uppercase; display:flex; align-items:center; gap:9px; }
+        .volt-gameplay-kicker::before { content:""; display:block; width:22px; height:2px; background:#59B37E; box-shadow:0 0 12px #59B37E; }
+        .volt-gameplay-title { margin:9px 0 0; color:#f4f7f1; font:900 clamp(25px,4vw,42px)/1.1 'Orbitron','Space Grotesk',sans-serif; letter-spacing:-.04em; }
+        .volt-gameplay-title span { color:#59B37E; text-shadow:0 0 24px rgba(89,179,126,.22); }
+        .volt-gameplay-desc { margin:10px 0 0; max-width:540px; color:#929b91; font-size:13px; line-height:1.7; }
+        .volt-gameplay-layout { display:grid; grid-template-columns:minmax(0,1.65fr) minmax(250px,.85fr); gap:18px; align-items:stretch; }
+        .volt-feature-video { position:relative; min-width:0; overflow:hidden; border:1px solid rgba(89,179,126,.25); border-radius:20px; background:#0b120e; box-shadow:0 22px 65px rgba(0,0,0,.24); animation:voltVideoReveal .85s .08s both; transition:transform .35s,border-color .35s,box-shadow .35s; }
+        .volt-feature-video:hover { transform:translateY(-5px); border-color:rgba(89,179,126,.62); box-shadow:0 28px 70px rgba(0,0,0,.34),0 0 32px rgba(89,179,126,.08); }
+        .volt-video-frame { position:relative; aspect-ratio:16/9; background:#050806; overflow:hidden; }
+        .volt-video-frame iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+        .volt-video-caption { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:17px 19px 19px; }
+        .volt-video-caption h3 { margin:0; color:#f4f7f1; font-size:15px; font-weight:900; }
+        .volt-video-caption p { margin:6px 0 0; color:#899287; font-size:11px; line-height:1.5; }
+        .volt-video-live { flex-shrink:0; color:#59B37E; border:1px solid rgba(89,179,126,.24); background:rgba(89,179,126,.07); border-radius:99px; padding:7px 9px; font-size:9px; font-weight:900; letter-spacing:.1em; }
+        .volt-gameplay-list { display:grid; grid-template-rows:repeat(3,minmax(0,1fr)); gap:12px; }
+        .volt-gameplay-link { position:relative; display:flex; align-items:center; gap:14px; min-width:0; text-decoration:none; color:inherit; border:1px solid rgba(255,255,255,.075); border-radius:16px; padding:13px; background:linear-gradient(115deg,rgba(255,255,255,.045),rgba(255,255,255,.012)); overflow:hidden; transition:transform .28s,border-color .28s,background .28s,box-shadow .28s; animation:voltVideoReveal .7s both; }
+        .volt-gameplay-link:nth-child(2) { animation-delay:.12s; } .volt-gameplay-link:nth-child(3) { animation-delay:.24s; }
+        .volt-gameplay-link:hover { transform:translateX(5px); border-color:rgba(89,179,126,.42); background:rgba(89,179,126,.055); box-shadow:0 12px 30px rgba(0,0,0,.18); }
+        .volt-gameplay-art { flex-shrink:0; width:82px; height:78px; display:grid; place-items:center; border-radius:11px; color:#59B37E; font:900 24px 'Orbitron',sans-serif; background:radial-gradient(circle at 70% 20%,rgba(89,179,126,.28),transparent 40%),linear-gradient(135deg,#14251a,#090e0b 70%); border:1px solid rgba(89,179,126,.15); position:relative; overflow:hidden; }
+        .volt-gameplay-art::after { content:""; position:absolute; inset:-60% -100%; background:linear-gradient(110deg,transparent 42%,rgba(255,255,255,.12),transparent 55%); transform:translateX(-70%); transition:transform .6s; }
+        .volt-gameplay-link:hover .volt-gameplay-art::after { transform:translateX(70%); }
+        .volt-gameplay-meta { min-width:0; flex:1; }
+        .volt-gameplay-meta strong { display:block; color:#e8eee6; font-size:12px; line-height:1.45; }
+        .volt-gameplay-meta small { display:block; margin-top:6px; color:#7f8a7f; font-size:10px; line-height:1.5; }
+        .volt-gameplay-arrow { color:#59B37E; font-size:18px; transition:transform .25s; }
+        .volt-gameplay-link:hover .volt-gameplay-arrow { transform:translate(3px,-3px); }
+        @keyframes voltAmbient { from { transform:translate3d(0,-10px,0) scale(.9); opacity:.6; } to { transform:translate3d(30px,20px,0) scale(1.12); opacity:1; } }
+        @keyframes voltVideoReveal { from { opacity:0; transform:translateY(20px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
+        @media (max-width:900px) { .volt-gameplay-layout { grid-template-columns:1fr; } .volt-gameplay-list { grid-template-columns:repeat(3,minmax(0,1fr)); grid-template-rows:auto; } .volt-gameplay-link { flex-direction:column; align-items:flex-start; } .volt-gameplay-art { width:100%; height:92px; } .volt-gameplay-arrow { display:none; } }
+        @media (max-width:600px) { .volt-gameplay-heading { align-items:flex-start; flex-direction:column; } .volt-gameplay-list { grid-template-columns:1fr; } .volt-gameplay-link { flex-direction:row; align-items:center; } .volt-gameplay-art { width:76px; height:70px; } .volt-video-caption { align-items:flex-start; flex-direction:column; } }
 
         @media (prefers-reduced-motion: reduce) {
           *, *::before, *::after {
@@ -1438,6 +1763,10 @@ function StoreApp() {
         }
       `}</style>
 
+      <div className="volt-page-spider" aria-hidden="true">
+        <span>🕷️</span>
+      </div>
+
       {/* ===================================================
           HEADER
       =================================================== */}
@@ -1445,8 +1774,11 @@ function StoreApp() {
       <header style={styles.header}>
         <div
           style={styles.logo}
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          title="VOLT — Power Your Game"
+          onClick={irInicio}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") irInicio(); }}
+          title="VOLT — voltar ao início e mostrar todos os produtos"
         >
           <img
             src="/logo.jpg"
@@ -1472,31 +1804,38 @@ function StoreApp() {
         <nav className="volt-nav" style={styles.nav}>
           <button
             style={styles.navButton}
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            onClick={irInicio}
           >
             Início
           </button>
 
           <button
             style={styles.navButton}
-            onClick={() =>
-              document
-                .getElementById("catalogo")
-                ?.scrollIntoView({ behavior: "smooth" })
-            }
+            onClick={() => {
+              setCategoriaSelecionada("Todas as categorias");
+              setBusca("");
+              document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" });
+            }}
           >
             Produtos
           </button>
 
           <button
             style={styles.navButton}
-            onClick={() =>
-              document
-                .getElementById("catalogo")
-                ?.scrollIntoView({ behavior: "smooth" })
-            }
+            onClick={() => {
+              setCategoriaSelecionada("Todas as categorias");
+              setBusca("");
+              document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" });
+            }}
           >
             Ofertas
+          </button>
+
+          <button
+            style={styles.navButton}
+            onClick={() => document.getElementById("gameplays")?.scrollIntoView({ behavior: "smooth" })}
+          >
+            Gameplays
           </button>
         </nav>
 
@@ -1597,6 +1936,76 @@ function StoreApp() {
             </div>
           </div>
         </div>
+
+        <button
+          type="button"
+          className="volt-spider-scroll"
+          aria-label="Descer para explorar os produtos"
+          title="Descer para explorar"
+          onClick={() => document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" })}
+        >
+          <span className="volt-spider-thread" aria-hidden="true">
+            <span className="volt-spider">🕷</span>
+          </span>
+          <span>ROLE PARA EXPLORAR</span>
+        </button>
+      </section>
+
+      {/* ===================================================
+          GAMEPLAYS EM DESTAQUE
+      =================================================== */}
+
+      <section className="volt-gameplay-section" style={{ ...styles.section, paddingTop: 46, paddingBottom: 46 }} id="gameplays">
+        <div className="volt-gameplay-heading">
+          <div>
+            <div className="volt-gameplay-kicker">VOLT / PLAY</div>
+            <h2 className="volt-gameplay-title">Entre no <span>game.</span></h2>
+            <p className="volt-gameplay-desc">Veja trailers, momentos de gameplay e novidades do universo gamer antes de escolher sua próxima aventura.</p>
+          </div>
+          <a href="https://www.youtube.com/gaming" target="_blank" rel="noreferrer" style={{ color: "#59B37E", textDecoration: "none", fontSize: 11, fontWeight: 900, letterSpacing: ".06em", paddingBottom: 5, whiteSpace: "nowrap" }}>
+            MAIS VÍDEOS ↗
+          </a>
+        </div>
+
+        <div className="volt-gameplay-layout">
+          <article className="volt-feature-video">
+            <div className="volt-video-frame">
+              <iframe
+                src="https://www.youtube-nocookie.com/embed/ZRhJT2nmvA4?rel=0&modestbranding=1"
+                title="Marvel's Spider-Man 2 — Gameplay Reveal oficial"
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+              />
+            </div>
+            <div className="volt-video-caption">
+              <div>
+                <h3>Gameplay & próximos lançamentos</h3>
+                <p>Gameplay oficial de Marvel's Spider-Man 2, publicado pelo canal verificado PlayStation.</p>
+              </div>
+              <span className="volt-video-live">VOLT SELECT</span>
+            </div>
+          </article>
+
+          <div className="volt-gameplay-list">
+            <a className="volt-gameplay-link" href="https://www.youtube.com/watch?v=ZRhJT2nmvA4" target="_blank" rel="noreferrer">
+              <div className="volt-gameplay-art" aria-hidden="true">SP</div>
+              <div className="volt-gameplay-meta"><strong>Marvel's Spider-Man 2</strong><small>Combate, exploração e ação em Nova York</small></div>
+              <span className="volt-gameplay-arrow" aria-hidden="true">↗</span>
+            </a>
+            <a className="volt-gameplay-link" href="https://www.youtube.com/watch?v=g1wr0DfV73E" target="_blank" rel="noreferrer">
+              <div className="volt-gameplay-art" aria-hidden="true">GOW</div>
+              <div className="volt-gameplay-meta"><strong>God of War Ragnarök</strong><small>Combates intensos e aventura épica</small></div>
+              <span className="volt-gameplay-arrow" aria-hidden="true">↗</span>
+            </a>
+            <a className="volt-gameplay-link" href="https://www.youtube.com/watch?v=TSi0iJYSQ24" target="_blank" rel="noreferrer">
+              <div className="volt-gameplay-art" aria-hidden="true">FC26</div>
+              <div className="volt-gameplay-meta"><strong>EA SPORTS FC 26</strong><small>Jogadas, partidas e futebol virtual</small></div>
+              <span className="volt-gameplay-arrow" aria-hidden="true">↗</span>
+            </a>
+          </div>
+        </div>
       </section>
 
       {/* ===================================================
@@ -1605,9 +2014,9 @@ function StoreApp() {
 
       <section style={styles.section}>
         <div style={styles.sectionHeader}>
-          <div>
+          <div className="volt-section-heading">
             <h2 style={styles.sectionTitle}>VOLT</h2>
-            <div style={styles.sectionSubtitle}>Explore</div>
+            <div className="volt-explore-word" style={styles.sectionSubtitle}>Explore</div>
           </div>
 
           <div style={{ color: "#777", fontSize: 12 }}>
@@ -1622,31 +2031,34 @@ function StoreApp() {
               key={categoria.id}
               style={styles.categoryCard}
               onClick={() => {
-                setCategoriaSelecionada(categoria.nome);
+                setCategoriaSelecionada(nomeCategoria(categoria));
                 document
                   .getElementById("catalogo")
                   ?.scrollIntoView({ behavior: "smooth" });
               }}
             >
-              {categoria.imagem ? (
-                <img
-                  src={categoria.imagem}
-                  alt={categoria.nome}
-                  style={styles.categoryImage}
-                />
-              ) : (
-                <div
-                  style={{
-                    ...styles.categoryImage,
-                    background:
-                      "linear-gradient(135deg, #141a22, #080b10)",
-                  }}
-                />
-              )}
+              <img
+                src={imagemCategoria(categoria)}
+                alt={nomeCategoria(categoria)}
+                loading="lazy"
+                style={styles.categoryImage}
+                onError={(event) => {
+                  const img = event.currentTarget;
+                  const fallbacks = imagensFallbackCategoria(categoria);
+                  const currentIndex = Number(img.dataset.fallbackIndex || "0");
+                  if (currentIndex < fallbacks.length) {
+                    img.dataset.fallbackIndex = String(currentIndex + 1);
+                    img.src = fallbacks[currentIndex];
+                  } else {
+                    img.onerror = null;
+                    img.src = svgCategoriaFallback(categoria);
+                  }
+                }}
+              />
 
               <div style={styles.categoryOverlay}>
                 <div>
-                  <div style={styles.categoryName}>{categoria.nome}</div>
+                  <div style={styles.categoryName}>{nomeCategoria(categoria)}</div>
                   <div
                     style={{
                       color: "#59B37E",
@@ -1705,8 +2117,8 @@ function StoreApp() {
             <option>Todas as categorias</option>
 
             {categorias.map((categoria) => (
-              <option key={categoria.id} value={categoria.nome}>
-                {categoria.nome}
+              <option key={categoria.id} value={nomeCategoria(categoria)}>
+                {nomeCategoria(categoria)}
               </option>
             ))}
           </select>
@@ -1924,6 +2336,7 @@ function StoreApp() {
           onClick={() => setProdutoSelecionado(null)}
         >
           <div
+            className="volt-modal"
             style={styles.modal}
             onClick={(event) => event.stopPropagation()}
           >
@@ -2097,6 +2510,7 @@ function StoreApp() {
           onClick={() => setMostrarCarrinho(false)}
         >
           <div
+            className="volt-modal volt-cart-modal"
             style={{
               ...styles.modal,
               maxWidth: 650,
@@ -2112,7 +2526,7 @@ function StoreApp() {
                   gap: 20,
                 }}
               >
-                <h2 style={styles.modalTitle}>Seu carrinho</h2>
+                <div className="volt-modal-heading"><span className="volt-modal-kicker">VOLT / CHECKOUT</span><h2 style={styles.modalTitle}>Seu carrinho</h2><p className="volt-modal-subtitle">Seu próximo upgrade começa aqui.</p></div>
 
                 <button
                   style={styles.closeButton}
@@ -2125,17 +2539,18 @@ function StoreApp() {
               <div style={{ marginTop: 25 }}>
                 {carrinho.length === 0 ? (
                   <div
+                    className="volt-empty-state"
                     style={{
                       padding: 50,
                       textAlign: "center",
                       color: "#777",
                     }}
                   >
-                    Seu carrinho está vazio.
+                    <span className="volt-empty-icon">🛒</span><strong>Seu carrinho está vazio</strong><p>Explore a loja e adicione seus próximos favoritos.</p>
                   </div>
                 ) : (
                   carrinho.map((item) => (
-                    <div style={styles.cartItem} key={item.id}>
+                    <div className="volt-cart-item" style={styles.cartItem} key={item.id}>
                       <img
                         src={imagemCard(item)}
                         alt={item.nome}
@@ -2251,6 +2666,7 @@ function StoreApp() {
           onClick={() => setMostrarFavoritos(false)}
         >
           <div
+            className="volt-modal volt-favorites-modal"
             style={{
               ...styles.modal,
               maxWidth: 750,
@@ -2265,7 +2681,7 @@ function StoreApp() {
                   alignItems: "center",
                 }}
               >
-                <h2 style={styles.modalTitle}>Favoritos</h2>
+                <div className="volt-modal-heading"><span className="volt-modal-kicker">SUA LISTA PESSOAL</span><h2 style={styles.modalTitle}>Favoritos <span className="volt-heading-count">{favoritos.length}</span></h2><p className="volt-modal-subtitle">Os equipamentos e jogos que ganharam seu coração.</p></div>
 
                 <button
                   style={styles.closeButton}
@@ -2286,6 +2702,7 @@ function StoreApp() {
               >
                 {favoritos.length === 0 ? (
                   <div
+                    className="volt-empty-state"
                     style={{
                       gridColumn: "1 / -1",
                       textAlign: "center",
@@ -2293,11 +2710,12 @@ function StoreApp() {
                       color: "#777",
                     }}
                   >
-                    Você ainda não possui produtos favoritos.
+                    <span className="volt-empty-icon">♡</span><strong>Sua lista ainda está vazia</strong><p>Toque no coração de um produto para guardá-lo aqui.</p>
                   </div>
                 ) : (
                   favoritos.map((produto) => (
                     <div
+                      className="volt-favorite-card"
                       key={produto.id}
                       style={{
                         borderRadius: 15,
@@ -2373,6 +2791,7 @@ function StoreApp() {
           onClick={() => setMostrarFormulario(false)}
         >
           <div
+            className="volt-modal"
             style={{
               ...styles.modal,
               maxWidth: 900,
